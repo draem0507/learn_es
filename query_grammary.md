@@ -144,6 +144,43 @@ POST /school/_search
 
 
 
+### 滚动查询
+
+```json
+GET index_employee/_search?scroll=1m
+{
+ "size" :1000,
+ "query": {
+
+   "term": {
+    "name": {
+       "value": "liu"
+     }
+     
+   }
+   
+ },
+ "sort": [
+   {
+     "emp_id": {
+       "order": "desc"
+     }
+   },
+   {
+     "tenant_id": {
+       "order": "asc"
+    }
+   }
+ ]
+}
+```
+
+
+
+
+
+
+
 **谈论query和filter的效率**
 
    一般认为filter的速度快于query的速度 
