@@ -87,4 +87,45 @@ POST lagou/job/1/_update
 #删除
 DELETE lagou/job/1
 DELETE lagou
-#无法删除表
+
+#_delete_by_query
+
+_delete_by_query会删除所有query语句匹配上的文档，用法如下：
+
+```java
+curl -X POST "localhost:9200/twitter/_delete_by_query" -H 'Content-Type: application/json' -d' {   "query": {      "match": {       "name": "测试删除"    
+}   
+}
+}
+//返回数据格式，告诉你用时和删除多少数据等
+{
+  "took" : 147,
+  "timed_out": false,
+  "deleted": 119,
+  "batches": 1,
+  "version_conflicts": 0,
+  "noops": 0,
+  "retries": {
+    "bulk": 0,
+    "search": 0
+  },
+  "throttled_millis": 0,
+  "requests_per_second": -1.0,
+  "throttled_until_millis": 0,
+  "total": 119,
+  "failures" : [ ]
+}
+//一次删除多个索引（即：数据库）中的多个类型（即表）中的数据，也是可以的。例如：
+curl -X POST "localhost:9200/twitter,blog/_docs,post/_delete_by_query" -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "match_all": {}
+  }
+}
+'
+
+//参考：https://www.jianshu.com/p/60a6ad164035
+
+
+```
+
