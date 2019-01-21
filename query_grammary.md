@@ -1,4 +1,19 @@
 ##elastic查询语法
+
+### 基本语法
+
+```java
+　{
+　　  "query": { "match_all": {} 		},
+       "from": 10,
+
+ 　　 "size": 10,
+     "_source:"["name","age"]
+　　}'
+     //size默认为10；from为0
+     //——source 返回的字段过滤
+```
+
 ###相关性，query方式；基于score进行排序
 ```java
 "sort": [
@@ -142,6 +157,71 @@ POST /school/_search
  }   
 ```
 
+### 聚合查询
+
+```java
+{
+
+  　　"size": 0,
+
+ 　　 "aggs": {
+
+   　　 "group_by_state": {
+
+   　　  "terms": {
+
+     　　　   "field": "state"
+
+   　　  }
+
+   　　 }
+
+  　　}
+
+　　}
+//等同于 　　SELECT state, COUNT(*) FROM bank GROUP BY state ORDER BY COUNT(*) DESC
+```
+
+
+　　
+
+```java
+{
+
+  　　"size": 0,
+
+  　　"aggs": {
+
+   　　 "group_by_state": {
+
+  　　  "terms": {
+
+      　　 "field": "state"
+
+     　　 },
+
+   　　  "aggs": {
+
+      　　 "average_balance": {
+
+       　　  "avg": {
+
+        　　   "field": "balance"
+
+         　　 }
+
+      　　 }
+
+     　　 }
+
+   　　}
+
+  　　}
+
+　　}
+//按照state分组，降序排序，返回balance的平均值：
+```
+
 
 
 ### 滚动查询
@@ -181,9 +261,45 @@ GET index_employee/_search?scroll=1m
 
 
 
-**谈论query和filter的效率**
+### 谈论query和filter的效率
 
    一般认为filter的速度快于query的速度 
    \- filter不会计算相关度得分，效率高 
    \- filter的结果可以缓存到内存中，方便再用
+
+```java
+//找性别是女，所在的州是PA，过滤条件是年龄是39岁，balance大于等于10000的文档
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "gender": "F"
+          }
+        },
+        {
+          "match": {
+            "state": "PA"
+          }
+        }
+      ],
+      "filter": [
+        {
+          "term": {
+            "age": "39"
+          }
+        },
+        {
+          "range": {
+            "balance": {
+              "gte": "10000"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
 

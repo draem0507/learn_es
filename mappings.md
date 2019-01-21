@@ -140,7 +140,19 @@ POST localhost:9200/_aliases -d '
 
 ### mapping 限制的type
 
-![](/Users/lwx/Downloads/1120422-20171129202455761-838163003.png) 
+![](/Users/lwx/Downloads/1120422-20171129202455761-838163003.png)
+
+
+
+### 分词器
+
+```java
+get /website/blogs/_anazyze?field=title&text=welcom to china
+
+get /_analyze?analyzer=standar&text=Text to analyze
+```
+
+ 
 
  
 
