@@ -303,3 +303,46 @@ GET index_employee/_search?scroll=1m
 }
 ```
 
+```java
+GET /index_mdm_his_emp_v1/_search
+{
+  "query": {
+    "bool": {
+      "must": {
+        "term": {
+          "snapshot": {
+            "value": "20190106"
+          }
+        }
+      },
+      "filter": {
+        "range": {
+          "join_date": {
+            "lt": "2018-08-01",
+            "gte": "2018-03-01"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+```java
+{
+  "query": { 
+    "bool": { 
+      "must": [
+        { "match": { "title":   "Search"        }}, 
+        { "match": { "content": "Elasticsearch" }}  
+      ],
+      "filter": [ 
+        { "term":  { "status": "published" }}, 
+        { "range": { "publish_date": { "gte": "2015-01-01" }}} 
+      ]
+    }
+  }
+
+}
+```
+
