@@ -3,68 +3,83 @@
 ### 基本语法
 
 ```java
-　{
-　　  "query": { "match_all": {} 		},
-       "from": 10,
-
- 　　 "size": 10,
-     "_source:"["name","age"]
-　　}'
-     //size默认为10；from为0
-     //——source 返回的字段过滤
-```
-
-###相关性，query方式；基于score进行排序
-```java
-"sort": [
-  {
-    "post_date": { "order": "desc"     }
-  }
-]
-
-//也可以使用这种方式
-//GET test_index/test_type/_search?sort=post_date:desc&q=search
-```
-###排序
-```java
 GET /index_china/fulltext/_search
 {
-  "query": {
-    "match": {   "name": "小张" } 
+　　  "query": {
+      	"match_all": {}
       },
-  "sort": "age"
-}
+      "from": 10,
+ 　　 "size": 10,
+     "_source:"["name","age"],
+       "sort": "age" //基于score进行排序
+　　}'
+     //size默认为10；from为0,_source 返回的字段过滤
+    //等同于 //GET test_index/test_type/_search?sort=post_date:desc&q=search
 ```
-###多级排序
+
+基本匹配查询
+
 ```java
- GET /index_china/fulltext/_search
+GET /employee/_search?q=John'
+//或则
+GET /employee/_search{
+    "query": {
+        "multi_match" : {
+            "query" : "John",
+            "fields" : ["_all"]//or Appoint clo["name","desc"]
+        }
+    }
+}'
+
+
+
+```
+
+###排序（默认根据query匹配的分数进行排序）
+
+```java
+GET/index_china/fulltext/_search
 {
 "query": {
-"match_all": {}
-},
-"sort":[ {"age":{"order":"asc"}},
-{"_score":{"order":"desc"}}]
+	"match_all": {}
+ },
+"sort":[ 
+	{"age":{"order":"asc"}},
+	{"_score":{"order":"desc"}}
+	]
 }
 ```
+
+### Boosting
+
 ```java
- 2.4 返回name中包含term "海" 或 "花" 的所有document
-
-POST /school/_search
+GET/index_china/fulltext/_search
 {
-  "query": { "match": { "name": "海 花" } }
+    "query": {
+        "multi_match" : {
+            "query" : "rock",
+            "fields": ["about", "interests^3"]//interests权重*3
+        }
+    }
+}
 
+```
 
-2.5 匹配phrase "海 花"
+### Bool Query
 
-POST /school/_search
-{
- "query": { "match_phrase": { "name": "海 花" }}
+Bool查询中的关键字有：
 
+- must
+  所有的语句都 必须（must） 匹配，与 AND 等价。
+- must_not
+  所有的语句都 不能（must not） 匹配，与 NOT 等价。
+- should
+  至少有一个语句要匹配，与 OR 等价。
 
+```java
+//返回name中包含"海"或"花"的所有document
 
-2.7 返回name中包含"海"或"花"的所有document
-
-POST /school/_search
+GET /school/_search
 {
   "query": {
    "bool": {
@@ -77,9 +92,9 @@ POST /school/_search
   }
   
   
-   2.6 返回name中包含"海"和"哥"的所有账户(AND)
+//返回name中包含"海"和"哥"的所有账户(AND)
 
-POST /school/_search
+GET /school/_search
 {
   "query": {
     "bool": {
@@ -90,9 +105,9 @@ POST /school/_search
     }
   }
   
-  2.9 返回name中包含"海",且地址不是"山东烟台"的所有document
+//返回name中包含"海",且地址不是"山东烟台"的所有document
 
-POST /school/_search
+GET /school/_search
 {
   "query": {
     "bool": {
@@ -106,10 +121,24 @@ POST /school/_search
   }
 }
 
-3.1 在所有document中寻找age在0-25岁之间(闭区间)的学生
+```
 
+### range查询
 
-POST /school/_search
+```java
+//基础用法
+"query": {
+        "range" : {
+            "birthday": {
+                "gte": "2017-02-01",
+                "lte": "2017-05-01"
+            }
+        }
+    }
+
+//在所有document中寻找age在0-25岁之间(闭区间)的学生
+
+GET /school/_search
 {
   "query": {
     "filtered": {
@@ -125,37 +154,88 @@ POST /school/_search
     }
   }
 }
-
-
 ```
 
-
-
-###保存完整的字符串作为一个词条，同时又分词索引
+### Term查询
 
 ```java
-//在ES中为实现该功能，ES提供了 multi-field mapping 机制，配置通过配置即可实现字段即分词，又可排序
- "title": {  
- "type": "string",
- "analyzer": "ansj",
- "fields": {
-     "sort": { 
-         "type": "string",
-         "index": "not_analyzed"
-     }
-  }
+//
+"query": {
+        "term" : {
+            "interests": "music"
+        }
+    }
+//多个
+{
+    "query": {
+        "terms" : {
+            "publisher": ["oreilly", "packt"]
+        }
+    }
 }
-//通过title字段作为搜索，而用title.sort字段作为排序： 
- GET /_search
- {
-     "query": {
-         "match": {
-             "title": "elasticsearch"
-         }
-     },
-     "sort": "title.sort"
- }   
+
+//返回name中包含term "海" 或 "花" 的所有document
+
+GET /school/_search
+{
+  "query": { "match": { "name": "海 花" } 
+ }
+
+//匹配phrase "海 花"
+
+GET /school/_search
+{
+ "query": { "match_phrase": { "name": "海 花" }}
 ```
+
+### Filtered查询
+
+过滤查询允许我们对查询结果进行筛选
+
+```java
+//查询about和interests中包含music关键字的员工，同时过滤出birthday大于2017/02/01的结果 
+"query": {
+        "filtered": {
+            "query" : {
+                "multi_match": {
+                    "query": "music",
+                    "fields": ["about","interests"]
+                }
+            },
+            "filter": {
+                "range" : {
+                    "birthday": {
+                        "gte": 2017-02-01
+                    }
+                }
+            }
+        }
+    }
+```
+
+
+
+### 查询为空的字段
+
+```java
+//in db like this:select eid,ent_name from ent_search where enttype_code is NULL;
+//in es,wo can use that:
+ GET ent_search/_search
+{
+  "_source": ["eid","ent_name"], 
+    "query": {
+        "bool": {
+            "must_not": {
+                "exists": {
+                    "field": "enttype_code"
+                }
+            }
+        }
+    }
+}  
+```
+
+## 高级查询
 
 ### 聚合查询
 
@@ -225,6 +305,8 @@ POST /school/_search
 
 
 ### 滚动查询
+
+## 小结
 
 ```json
 GET index_employee/_search?scroll=1m
@@ -346,3 +428,8 @@ GET /index_mdm_his_emp_v1/_search
 }
 ```
 
+## 参考
+
+1.[Elasticsearch 常用基本语法](https://www.cnblogs.com/sunfie/p/6653778.html)
+
+2.
