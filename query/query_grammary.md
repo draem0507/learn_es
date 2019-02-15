@@ -120,6 +120,19 @@ GET /school/_search
     }
   }
 }
+//查询某个为空的字段
+{
+  "query": {
+    "bool": {
+      "must_not": {
+        "exists": {
+          "field": "字段名"
+        }
+      }
+    }
+  }
+}
+
 
 ```
 
@@ -244,7 +257,7 @@ GET /school/_search
 
   　　"size": 0,
 
- 　　 "aggs": {
+ 　　 "aggs":{
 
    　　 "group_by_state": {
 
