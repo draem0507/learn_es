@@ -17,7 +17,7 @@ GET /index_china/fulltext/_search
     //等同于 //GET test_index/test_type/_search?sort=post_date:desc&q=search
 ```
 
-基本匹配查询
+#### 基本匹配查询
 
 ```java
 GET /employee/_search?q=John'
@@ -34,6 +34,64 @@ GET /employee/_search{
 
 
 ```
+
+#### term&terms  精确（分词后的词根）
+
+```java
+ {
+   "query":{
+       "term":{
+           "area":"GuangZhou"
+       }
+    }
+ }
+
+{
+  "query": {
+    "terms": {
+      "commentContent": [
+        "抖音",
+        "锤子"
+      ]
+    }
+  }
+}
+```
+
+##### match   分词
+
+```java
+{
+  "query": {
+    "match": {
+      "commentContent": "锤子"
+    }
+  }
+}
+```
+
+#### match_phrase
+
+文档同时满足下面两个条件才会被搜索到：
+
+- （1）分词后所有词项都要出现在该字段中
+- （2）字段中的词项顺序要一致
+
+1. ```java
+   
+      {
+     "query": {
+      "match_phrase": {
+       "content": "里皮恒大"
+     	}
+     }
+     }
+   
+   ```
+
+   
+
+
 
 ###排序（默认根据query匹配的分数进行排序）
 
@@ -246,11 +304,100 @@ GET /school/_search
         }
     }
 }  
+//对应字段中至少有一个非空值的文档
+{
+  "query": {
+    "exists": {
+      "field": "user"
+    }
+  }
+}
 ```
 
-## 高级查询
+
 
 ### 聚合查询
+
+#### max
+
+```java
+{
+  "size": 0,
+  "aggs": {
+    "max_task_id": {
+      "max": {
+        "field": "taskId"
+      }
+    }
+  }
+}
+//size不设置为0，除了返回聚合结果外，还会返回其它所有的数据。
+/**
+返回结果
+ "aggregations": {
+    "max_task_id": {
+      "value": 454951685710676000
+    }
+  }
+*/
+
+
+
+
+```
+
+　#### min
+
+```
+{
+  "size": 0,
+  "aggs": {
+    "min_task_id": {
+      "min": {
+        "field": "taskId"
+      }
+    }
+  }
+}
+
+```
+
+#### avg
+
+#### sum
+
+同max
+
+#### stats
+
+返回各种统计数据
+
+```
+{
+  "size": 0,
+  "aggs": {
+    "max_task_id": {
+      "stats": {
+        "field": "taskId"
+      }
+    }
+  }
+}
+//结果
+"aggregations": {
+    "max_task_id": {
+      "count": 15422,
+      "min": 123,
+      "max": 454951685710676000,
+      "avg": 451931162244731800,
+      "sum": 6.969682384138254e+21
+    }
+  }
+```
+
+#### group by
+
+相当于MySQL的group by操作，所以不要尝试对es中text的字段进行桶聚合，否则会失败。
 
 ```java
 {
@@ -272,13 +419,14 @@ GET /school/_search
   　　}
 
 　　}
-//等同于 　　SELECT state, COUNT(*) FROM bank GROUP BY state ORDER BY COUNT(*) DESC
+　　//等同于 　　SELECT state, COUNT(*) FROM bank GROUP BY state ORDER BY COUNT(*) DESC
 ```
 
 
-　　
+
 
 ```java
+//在桶聚合的过程中还可以进行指标聚合，相当于mysql做group by之后，再做各种max、min、avg、sum、stats之类的： select avg(balance),state from xx group by state
 {
 
   　　"size": 0,
@@ -313,6 +461,145 @@ GET /school/_search
 
 　　}
 //按照state分组，降序排序，返回balance的平均值：
+```
+
+Filter
+
+```java
+//相当于是MySQL根据where条件过滤出结果，然后再做各种max、min、avg、sum、stats操作。
+
+{
+  "size": 0,
+  "aggs": {
+    "gender_1_follower": {
+      "filter": {
+        "term": {
+          "gender": 1
+        }
+      },
+      "aggs": {
+        "stats_follower": {
+          "stats": {
+            "field": "realFollowerCount"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+filters
+
+```java
+//在Filter的基础上，可以查询多个字段各自独立的各个指标，即对每个查询结果分别做指标聚合。
+{
+  "size": 0,
+  "aggs": {
+    "gender_1_2_follower": {
+      "filters": {
+        "filters": [
+          {
+            "term": {
+              "gender": 1
+            }
+          },
+          {
+            "term": {
+              "gender": 2
+            }
+          }
+        ]
+      },
+      "aggs": {
+        "stats_follower": {
+          "stats": {
+            "field": "realFollowerCount"
+          }
+        }
+      }
+    }
+  }
+}
+
+
+```
+
+range
+
+```java
+{
+  "size": 0,
+  "aggs": {
+    "follower_ranges": {
+      "range": {
+        "field": "realFollowerCount",
+        "ranges": [
+          {
+            "to": 500
+          },
+          {
+            "from": 500,
+            "to": 1000
+          },
+          {
+            "from": 1000,
+            "to": 1500
+          },
+          {
+            "from": "1500",
+            "to": 2000
+          },
+          {
+            "from": 2000
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+#### Date Histogram Aggregation
+
+```java
+PUT my_blog
+{
+  "mappings": {
+    "article":{
+      "properties": {
+        "title":{"type": "text"},
+        "postdate":{
+          "type": "date"
+          , "format": "yyyy-MM-dd HH:mm:ss"
+        }
+      }
+    }
+  }
+}
+ 
+PUT my_blog/article/1
+{
+  "title":"Elasticsearch in Action",
+  "postdate":"2014-09-23 23:34:12"
+}
+
+GET my_blog/article/_search
+{
+  "size": 0, 
+  "aggs": {
+    "agg_year": {
+      "date_histogram": {
+        "field": "postdate",
+        "interval": "year",
+        "order": {
+          "_key": "asc"
+        }
+      }
+    }
+  }
+}
+// interval:month  day
 ```
 
 
@@ -440,6 +727,23 @@ GET /index_mdm_his_emp_v1/_search
 
 }
 ```
+
+
+
+## 查询删除
+
+```java
+POST infra_customer_comment_task_info/_delete_by_query
+{
+  "query": {
+      	"match_all": {}
+      }
+}
+```
+
+
+
+
 
 ## 参考
 

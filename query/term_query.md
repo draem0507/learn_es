@@ -369,3 +369,9 @@ GET my_index/my_type/_search
 
 > match query会先对自己的query string进行分词。也就是"Quick Foxes!"先分词为quick和foxes。然后在去倒排索引中查询，此处full_text是text类型，被分词为quick和foxes
 > 因此能匹配上。
+
+
+
+## 参考
+
+https://www.cnblogs.com/Finley/p/8372213.html
